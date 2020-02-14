@@ -6,3 +6,4 @@ tinycss
 cssselect
 emoji
 python-escpos
+telebot

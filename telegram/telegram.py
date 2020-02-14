@@ -13,7 +13,7 @@ from odoo import api, models, fields
 from odoo.addons.auth_signup.models.res_partner import random_token
 from odoo.tools.safe_eval import safe_eval
 from odoo.tools.translate import _
-from odoo.addons.base.ir.ir_qweb.qweb import QWeb
+from odoo.addons.base.models.qweb import QWeb
 import odoo
 
 from openerp.tools.translate import xml_translate
@@ -55,8 +55,10 @@ Usually starts with slash symbol, e.g. "/mycommand".
 SQL Reg Exp can be used. See https://www.postgresql.org/docs/current/static/functions-matching.html#FUNCTIONS-SIMILARTO-REGEXP
 For example /user\\_% handles requests like /user_1, /user_2 etc.""",
                        required=True, index=True)
-    description_name = fields.Char('User-friendly Name', help='Name to be used in /help command. Unlike Command field, this shall not contain technical information')
-    description = fields.Char('Description', help='What command does. It will be used in /help command')
+    description_name = fields.Char(
+        'User-friendly Name', help='Name to be used in /help command. Unlike Command field, this shall not contain technical information')
+    description = fields.Char(
+        'Description', help='What command does. It will be used in /help command')
     sequence = fields.Integer(default=16)
     type = fields.Selection([('normal', 'Normal'), ('cacheable', 'Normal (with caching)'), ('subscription', 'Subscription')], help='''
 * Normal - usual request-response commands
@@ -64,13 +66,16 @@ For example /user\\_% handles requests like /user_1, /user_2 etc.""",
 * Subscription - allows to subscribe to events or notifications
 
     ''', default='normal', required=True)
-    universal = fields.Boolean(help='Same answer for all users or not.', default=False)
-    response_code = fields.Text(help='''Code to be executed before rendering Response Template. ''')
+    universal = fields.Boolean(
+        help='Same answer for all users or not.', default=False)
+    response_code = fields.Text(
+        help='''Code to be executed before rendering Response Template. ''')
     response_template = fields.Text(
         "Response Template",
         translate=xml_translate,
         help='Template for the message, that user will receive immediately after sending command')
-    post_response_code = fields.Text(help='Python code to be executed after sending response')
+    post_response_code = fields.Text(
+        help='Python code to be executed after sending response')
     notification_code = fields.Text(help='''Code to be executed before rendering Notification Template
 
 Vars that can be created to be handled by telegram module
@@ -83,11 +88,16 @@ Check Help Tab for the rest variables.
         "Notification Template",
         translate=xml_translate,
         help='Template for the message, that user will receive when event happens')
-    group_ids = fields.Many2many('res.groups', string="Access Groups", help='Who can use this command. Set empty list for public commands (e.g. /login)', default=lambda self: [self.env.ref('base.group_user').id])
-    model_ids = fields.Many2many('ir.model', 'command_to_model_rel', 'command_id', 'model_id', string="Related models", help='Is used by Server Action to find commands to proceed')
-    user_ids = fields.Many2many('res.users', 'command_to_user_rel', 'telegram_command_id', 'user_id', string='Subscribed users')
-    menu_id = fields.Many2one('ir.ui.menu', 'Related Menu', help='Menu that can be used in command, for example to make search')
-    active = fields.Boolean('Active', default=True, help="Switch it off to hide from /help output. The command will work anyway. To make command not available apply some Access Group to it.")
+    group_ids = fields.Many2many('res.groups', string="Access Groups", help='Who can use this command. Set empty list for public commands (e.g. /login)',
+                                 default=lambda self: [self.env.ref('base.group_user').id])
+    model_ids = fields.Many2many('ir.model', 'command_to_model_rel', 'command_id', 'model_id',
+                                 string="Related models", help='Is used by Server Action to find commands to proceed')
+    user_ids = fields.Many2many('res.users', 'command_to_user_rel',
+                                'telegram_command_id', 'user_id', string='Subscribed users')
+    menu_id = fields.Many2one('ir.ui.menu', 'Related Menu',
+                              help='Menu that can be used in command, for example to make search')
+    active = fields.Boolean(
+        'Active', default=True, help="Switch it off to hide from /help output. The command will work anyway. To make command not available apply some Access Group to it.")
 
     _sql_constraints = [
         ('command_name_uniq', 'unique (name)', 'Command name must be unique!'),
@@ -97,7 +107,8 @@ Check Help Tab for the rest variables.
     def telegram_listener_message(self, messages, bot):
         for tmessage in messages:  # messages from telegram server
             locals_dict = {'telegram': {'tmessage': tmessage}}
-            tsession = self.env['telegram.session'].get_session(tmessage.chat.id)
+            tsession = self.env['telegram.session'].get_session(
+                tmessage.chat.id)
             cr = self.env.cr
             search_command = tmessage.text
             m = re.match('(/[^ @]*)([^ ]*)(.*)', search_command)
@@ -133,11 +144,13 @@ Check Help Tab for the rest variables.
                         locals_dict['telegram']['callback_data'] = replies[tmessage.text]
                         locals_dict['telegram']['callback_type'] = 'reply'
                     else:
-                        locals_dict['telegram']['callback_data'] = handle_reply.get('custom_reply')
+                        locals_dict['telegram']['callback_data'] = handle_reply.get(
+                            'custom_reply')
                         locals_dict['telegram']['callback_type'] = 'custom_reply'
 
             if not command:
-                not_found = {'html': _("There is no such command or you don't have access:  <i>%s</i>.  \n Use /help to see all available for you commands.") % tmessage.text}
+                not_found = {'html': _(
+                    "There is no such command or you don't have access:  <i>%s</i>.  \n Use /help to see all available for you commands.") % tmessage.text}
                 self.send(bot, not_found, tsession)
                 if not tsession.user_id:
                     self.send(bot, {'html': _('Or try to /login.')}, tsession)
@@ -150,11 +163,14 @@ Check Help Tab for the rest variables.
         if not callback_query.data:
             _logger.warning('callback_query without data', callback_query)
             return
-        command, callback_data = self._decode_callback_data(callback_query.data)
+        command, callback_data = self._decode_callback_data(
+            callback_query.data)
         if not command:
-            _logger.error('Command not found for callback_data %s ', callback_query.data)
+            _logger.error(
+                'Command not found for callback_data %s ', callback_query.data)
             return
-        tsession = self.env['telegram.session'].get_session(callback_query.message.chat.id)
+        tsession = self.env['telegram.session'].get_session(
+            callback_query.message.chat.id)
         command.execute(tsession, bot, {'telegram': {
             'callback_query': callback_query,
             'callback_data': callback_data,
@@ -234,22 +250,27 @@ Check Help Tab for the rest variables.
             locals_dict = locals_dict_origin and locals_dict_origin.copy() or {}
             if command.type == 'subscription':
                 if not tsession.user_id:
-                    command.send(bot, {'html': _('You have to /login first.')}, tsession)
+                    command.send(
+                        bot, {'html': _('You have to /login first.')}, tsession)
                     return
 
                 if tsession.user_id.id in command.user_ids.ids:
                     locals_dict['subscribed'] = False
-                    command.sudo().write({'user_ids': [(3, tsession.user_id.id, 0)]})
+                    command.sudo().write(
+                        {'user_ids': [(3, tsession.user_id.id, 0)]})
                 else:
                     locals_dict['subscribed'] = True
-                    command.sudo().write({'user_ids': [(4, tsession.user_id.id, 0)]})
+                    command.sudo().write(
+                        {'user_ids': [(4, tsession.user_id.id, 0)]})
 
             if command.type == 'cacheable':
                 response = bot.cache.get_value(command, tsession)
                 if response:
-                    _logger.debug('Cached response found for command %s', command.name)
+                    _logger.debug(
+                        'Cached response found for command %s', command.name)
                 else:
-                    _logger.debug('No cache found for command %s', command.name)
+                    _logger.debug(
+                        'No cache found for command %s', command.name)
 
             if not response:
                 response = command.get_response(locals_dict, tsession)
@@ -260,7 +281,8 @@ Check Help Tab for the rest variables.
     # bus listener
     @api.model
     def odoo_listener(self, message, bot):
-        bus_message = message['message']  # message from bus, not from telegram server.
+        # message from bus, not from telegram server.
+        bus_message = message['message']
         _logger.debug('bus_message')
         _logger.debug(bus_message)
         if bus_message['action'] == 'update_cache':
@@ -274,7 +296,8 @@ Check Help Tab for the rest variables.
     @api.multi
     def get_response(self, locals_dict=None, tsession=None):
         self.ensure_one()
-        locals_dict = self._eval(self.response_code, locals_dict=locals_dict, tsession=tsession)
+        locals_dict = self._eval(
+            self.response_code, locals_dict=locals_dict, tsession=tsession)
         return self._render(self.response_template, locals_dict, tsession)
 
     @api.multi
@@ -318,7 +341,8 @@ Check Help Tab for the rest variables.
         context = {}
         if tsession and tsession.context:
             context = simplejson.loads(tsession.context)
-        base_url = self.env['ir.config_parameter'].get_param('web.base.url', '')
+        base_url = self.env['ir.config_parameter'].get_param(
+            'web.base.url', '')
         locals_dict.update({
             'data': {},
             'options': {
@@ -343,9 +367,11 @@ Check Help Tab for the rest variables.
         locals_dict = self._update_locals_dict(locals_dict, tsession)
         globals_dict = self._get_globals_dict()
         if code:
-            safe_eval(code, globals_dict, locals_dict, mode="exec", nocopy=True)
+            safe_eval(code, globals_dict, locals_dict,
+                      mode="exec", nocopy=True)
             eval_time = time.time() - t0
-            _logger.debug('Eval in %.2fs \nlocals_dict:\n%s\nCode:\n%s\n', eval_time, locals_dict, code)
+            _logger.debug(
+                'Eval in %.2fs \nlocals_dict:\n%s\nCode:\n%s\n', eval_time, locals_dict, code)
         return locals_dict
 
     def _qcontext(self, locals_dict, tsession):
@@ -364,7 +390,8 @@ Check Help Tab for the rest variables.
         html = QWeb().render(dom, qcontext)
         html = html and html.strip()
         render_time = time.time() - t0
-        _logger.debug('Render in %.2fs\n qcontext:\n%s \nTemplate:\n%s\n', render_time, qcontext, template)
+        _logger.debug('Render in %.2fs\n qcontext:\n%s \nTemplate:\n%s\n',
+                      render_time, qcontext, template)
         options = locals_dict['options']
         handle_reply = options.get('handle_reply') or None
         if handle_reply:
@@ -424,9 +451,11 @@ Check Help Tab for the rest variables.
             elif rendered.get('inline_keyboard'):
                 # send a separate message to remove reply keyboard,
                 # because original message contains another markup
-                _logger.debug('Send a separate message to remove previous reply keyboard')
+                _logger.debug(
+                    'Send a separate message to remove previous reply keyboard')
                 # we send a dot, because telegram doesn't allow to send empty message
-                bot.send_message(tsession.chat_ID, '<em>.</em>', parse_mode='HTML', reply_markup=ReplyKeyboardRemove())
+                bot.send_message(tsession.chat_ID, '<em>.</em>',
+                                 parse_mode='HTML', reply_markup=ReplyKeyboardRemove())
                 tsession.reply_keyboard = False
             elif not reply_markup:
                 # tell to telegram remove keyboard
@@ -452,7 +481,8 @@ Check Help Tab for the rest variables.
                 bot.edit_message_text(rendered.get('html'), **kwargs)
             else:
                 _logger.debug('Send:\n%s', rendered.get('html'))
-                bot.send_message(tsession.chat_ID, rendered.get('html'), parse_mode='HTML', reply_markup=reply_markup)
+                bot.send_message(tsession.chat_ID, rendered.get(
+                    'html'), parse_mode='HTML', reply_markup=reply_markup)
         if rendered.get('photos'):
             _logger.debug('send photos %s' % len(rendered.get('photos')))
             for photo in rendered.get('photos'):
@@ -463,7 +493,8 @@ Check Help Tab for the rest variables.
                         bot.send_photo(tsession.chat_ID, photo['file_id'])
                         continue
                     except ApiException:
-                        _logger.debug('Sending photo by file_id is failed', exc_info=True)
+                        _logger.debug(
+                            'Sending photo by file_id is failed', exc_info=True)
                 photo['file'].seek(0)
                 _logger.debug('photo[file] %s ' % photo['file'])
                 res = bot.send_photo(tsession.chat_ID, photo['file'])
@@ -487,7 +518,8 @@ Check Help Tab for the rest variables.
         if action._name != 'ir.actions.act_window':
             return []
         domain, filters = self.get_action_domain(action)
-        graph_view = self.env[action.res_model].fields_view_get(view_type='graph')['arch']
+        graph_view = self.env[action.res_model].fields_view_get(view_type='graph')[
+            'arch']
         graph_view = etree.fromstring(graph_view)
 
         graph_config = {
@@ -527,7 +559,8 @@ Check Help Tab for the rest variables.
         # e.g. Month in CRM Pipeline
         dlabel_field = graph_config['row'][1]
 
-        xlabels, data_lines = self.process_read_group(res, xlabel_field, measure_field, dlabel_field)
+        xlabels, data_lines = self.process_read_group(
+            res, xlabel_field, measure_field, dlabel_field)
         xlabels = [x and x[1] for x in xlabels]
 
         res = {
@@ -582,7 +615,8 @@ Check Help Tab for the rest variables.
     def get_action_domain(self, action):
         used_filters = []
         eval_vars = {'uid': self.env.uid}
-        filters = self.env['ir.filters'].get_filters(action.res_model, action.id)
+        filters = self.env['ir.filters'].get_filters(
+            action.res_model, action.id)
         personal_filter = None
 
         # get_default_filter function from js:
@@ -605,7 +639,8 @@ Check Help Tab for the rest variables.
             # find filter from context, i.e. the same as UI works
             default_domains = []
             # parse search view
-            search_view = self.env[action.res_model].fields_view_get(view_id=action.search_view_id.id, view_type='search')['arch']
+            search_view = self.env[action.res_model].fields_view_get(
+                view_id=action.search_view_id.id, view_type='search')['arch']
             search_view_filters = {}
             for el in etree.fromstring(search_view):
                 if el.tag != 'filter':
@@ -634,9 +669,11 @@ Check Help Tab for the rest variables.
     def action_update_cache(self):
         # Called by ir.actions.server
         context = self._context
-        cacheable_commands = self.env['telegram.command'].search([('model_ids.model', '=', context['active_model']), ('type', '=', 'cacheable')])
+        cacheable_commands = self.env['telegram.command'].search(
+            [('model_ids.model', '=', context['active_model']), ('type', '=', 'cacheable')])
         if len(cacheable_commands):
-            _logger.debug('update_cache_bus_message(): commands will got cache update:')
+            _logger.debug(
+                'update_cache_bus_message(): commands will got cache update:')
             _logger.debug(cacheable_commands)
             message = {
                 'action': 'update_cache',
@@ -652,12 +689,16 @@ Check Help Tab for the rest variables.
             if not isinstance(id_or_xml_id, (int, long)):
                 subscription_commands = self.env.ref(id_or_xml_id)
             else:
-                subscription_commands = self.env['telegram.command'].browse(id_or_xml_id)
+                subscription_commands = self.env['telegram.command'].browse(
+                    id_or_xml_id)
         else:
             # Called by base.action.rule via ir.actions.server
-            subscription_commands = self.env['telegram.command'].search([('model_ids.model', '=', context['active_model']), ('type', '=', 'subscription')])
-        _logger.debug('subscription_commands %s' % [c.name for c in subscription_commands])
-        event = dict((k, context.get(k)) for k in ['active_model', 'active_id', 'active_ids'])
+            subscription_commands = self.env['telegram.command'].search(
+                [('model_ids.model', '=', context['active_model']), ('type', '=', 'subscription')])
+        _logger.debug('subscription_commands %s' %
+                      [c.name for c in subscription_commands])
+        event = dict((k, context.get(k))
+                     for k in ['active_model', 'active_id', 'active_ids'])
         subscription_commands.send_notifications(event=event)
 
     # bus reaction methods
@@ -668,7 +709,8 @@ Check Help Tab for the rest variables.
                 response = command.get_response()
                 bot.cache.set_value(command, response)
             else:
-                res = self.env['telegram.session'].search([('user_id.groups_id', 'in', command.group_ids.ids)])
+                res = self.env['telegram.session'].search(
+                    [('user_id.groups_id', 'in', command.group_ids.ids)])
                 for tsession in res:
                     response = command.get_response(tsession=tsession)
                     bot.cache.set_value(command, response, tsession)
@@ -697,16 +739,20 @@ Check Help Tab for the rest variables.
         _logger.debug('send_notifications(). bus_message=%s', bus_message)
         tsession = None
         if bus_message.get('tsession_ids'):
-            tsession = self.env['telegram.session'].browse(bus_message.get('tsession_ids'))
+            tsession = self.env['telegram.session'].browse(
+                bus_message.get('tsession_ids'))
         for command in self.env['telegram.command'].browse(bus_message['command_ids']):
-            locals_dict = command.eval_notification(bus_message.get('event'), tsession)
+            locals_dict = command.eval_notification(
+                bus_message.get('event'), tsession)
 
             if command.type == 'subscription':
                 notify_user_ids = set(command.user_ids.ids)
                 if 'notify_user_ids' in locals_dict['options']:
-                    notify_user_ids = notify_user_ids.intersection(set(locals_dict['options'].get('notify_user_ids', [])))
+                    notify_user_ids = notify_user_ids.intersection(
+                        set(locals_dict['options'].get('notify_user_ids', [])))
 
-                notify_sessions = self.env['telegram.session'].search([('user_id', 'in', list(notify_user_ids))])
+                notify_sessions = self.env['telegram.session'].search(
+                    [('user_id', 'in', list(notify_user_ids))])
 
             else:
                 notify_sessions = tsession
@@ -719,7 +765,8 @@ Check Help Tab for the rest variables.
 
             for tsession in notify_sessions:
                 if not command.universal:
-                    rendered = command.render_notification(locals_dict, tsession)
+                    rendered = command.render_notification(
+                        locals_dict, tsession)
                 command.send(bot, rendered, tsession)
 
     @api.multi
@@ -750,7 +797,8 @@ Check Help Tab for the rest variables.
     @api.model
     def execute_emulated_request(self, bus_message, bot):
         for command in self.browse(bus_message['command_ids']):
-            tsession = self.env['telegram.session'].search([('user_id', '=', bus_message['user_id'])])
+            tsession = self.env['telegram.session'].search(
+                [('user_id', '=', bus_message['user_id'])])
             if not tsession or not tsession.chat_ID:
                 return False
             command.execute(tsession, bot)
@@ -786,8 +834,10 @@ class TelegramSession(models.Model):
     odoo_session_sid = fields.Char(help="Equal to request.session.sid")
     logged_in = fields.Boolean()
     user_id = fields.Many2one('res.users')
-    context = fields.Text('Context', help='Any json serializable data. Can be used to share data between user requests.')
-    reply_keyboard = fields.Boolean('Reply Keyboard', help='User is shown ReplyKeyboardMarkup. Such keyboard has to be removed explicitly')
+    context = fields.Text(
+        'Context', help='Any json serializable data. Can be used to share data between user requests.')
+    reply_keyboard = fields.Boolean(
+        'Reply Keyboard', help='User is shown ReplyKeyboardMarkup. Such keyboard has to be removed explicitly')
     handle_reply = fields.Text('Reply handling')
     handle_reply_command_id = fields.Many2one('telegram.command')
 
@@ -803,13 +853,16 @@ class TelegramSession(models.Model):
 
     @api.model
     def get_session(self, chat_ID):
-        tsession = self.env['telegram.session'].search([('chat_ID', '=', chat_ID)])
+        tsession = self.env['telegram.session'].search(
+            [('chat_ID', '=', chat_ID)])
         if not tsession:
-            tsession = self.env['telegram.session'].create({'chat_ID': chat_ID})
+            tsession = self.env['telegram.session'].create(
+                {'chat_ID': chat_ID})
         return tsession
 
 
 class ResUsers(models.Model):
     _inherit = "res.users"
 
-    telegram_command_ids = fields.Many2many('telegram.command', 'command_to_user_rel', 'user_id', 'telegram_command_id', string='Subscribed Commands')
+    telegram_command_ids = fields.Many2many(
+        'telegram.command', 'command_to_user_rel', 'user_id', 'telegram_command_id', string='Subscribed Commands')
